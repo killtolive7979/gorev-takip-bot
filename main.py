@@ -6,16 +6,13 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import google.generativeai as genai
 import json
 from datetime import datetime
-import re
 
-# API Anahtarları
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# Görevleri sakla
 tasks = []
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -31,7 +28,7 @@ async def list_tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not tasks:
         await update.message.reply_text("📋 Henüz görev yok.")
         return
-    msg = "📋 Görevleriniz:\n\n"
+    msg = "📋 *Görevleriniz:*\n\n"
     for i, task in enumerate(tasks, 1):
         msg += f"{i}. {task['description']}\n"
     await update.message.reply_text(msg, parse_mode="Markdown")
@@ -63,7 +60,7 @@ Sadece JSON döndür, başka bir şey yazma."""
     response = model.generate_content(prompt)
     
     try:
-        clean = response.text.replace("json", "").replace("", "").strip()
+        clean = response.text.replace("```json", "").replace("```", "").strip()
         task_data = json.loads(clean)
         task_data["chat_id"] = chat_id
         task_data["created_at"] = datetime.now().isoformat()
@@ -71,7 +68,7 @@ Sadece JSON döndür, başka bir şey yazma."""
         
         await update.message.reply_text(
             f"✅ Görev kaydedildi!\n\n"
-            f"📌 {task_data['description']}\n"
+            f"📌 *{task_data['description']}*\n"
             f"⏱ Her {task_data['check_interval_minutes']} dakikada kontrol edilecek.",
             parse_mode="Markdown"
         )
@@ -91,13 +88,13 @@ Eğer hayır ise: {{"triggered": false}}
 Sadece JSON döndür."""
 
                 response = model.generate_content(prompt)
-                clean = response.text.replace("json", "").replace("", "").strip()
+                clean = response.text.replace("```json", "").replace("```", "").strip()
                 result = json.loads(clean)
                 
                 if result.get("triggered"):
                     await app.bot.send_message(
                         chat_id=task["chat_id"],
-                        text=f"🔔 Bildirim!\n\n{result['message']}",
+                        text=f"🔔 *Bildirim!*\n\n{result['message']}",
                         parse_mode="Markdown"
                     )
             except Exception as e:
@@ -117,5 +114,5 @@ async def main():
     
     await app.run_polling()
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     asyncio.run(main())
